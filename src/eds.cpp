@@ -267,3 +267,8 @@ void EDS::load(std::istream & is)
     }
   }
 }
+
+SegmentList EDS::get_segments() const
+{
+  return segments;
+}

@@ -40,6 +40,8 @@ private:
 class EDS
 {
 public:
+  using SegmentList = std::vector<std::unique_ptr<Segment>>;
+
   EDS() = default;
 
   void save(std::ostream & os) const;
@@ -47,10 +49,12 @@ public:
 
   void add_segment(std::unique_ptr<Segment> && segment_ptr);
 
+  SegmentList get_segments() const;
+
   friend std::ostream & operator << (std::ostream & os, const EDS & eds);
   friend std::istream & operator >> (std::istream & is, EDS & eds);
 private:
-  std::vector<std::unique_ptr<Segment>> segments;
+  SegmentList segments;
 };
 
 #endif //VCF2EDS_EDS_H
