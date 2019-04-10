@@ -70,15 +70,11 @@ size_t Segment::length() const
 
 bool Segment::is_degenerate() const
 {
-  return variants.size() > 0;
+  return !variants.empty();
 }
 
 void Segment::merge(const Segment & segment)
 {
-//  std::cout << "-----------------\n";
-//  std::cout << "Merge:\n";
-//  std::cout << *this << std::endl;
-//  std::cout << segment << std::endl;
   if (end_position() < segment.start_position() || segment.end_position() < start_position())
   {
     throw std::exception();
@@ -125,8 +121,6 @@ void Segment::merge(const Segment & segment)
   if (suffix_id)
   {
     assert(suffix_id == 1 || suffix_id == 2);
-
-    std::cout << end_position() << " | " << segment.end_position() << std::endl;
 
     if (suffix_id == 1)
       suffix = reference.substr(reference.length() - (end_position() - segment.end_position()));
@@ -206,8 +200,6 @@ void Segment::merge(const Segment & segment)
     new_variants.erase(reference);
 
   variants.swap(new_variants);
-
-  std::cout << *this << std::endl;
 }
 
 void EDS::add_segment(std::unique_ptr<Segment> && segment_ptr)
@@ -217,7 +209,6 @@ void EDS::add_segment(std::unique_ptr<Segment> && segment_ptr)
 
 void EDS::save(std::ostream & os) const
 {
-  std::cout << "EDS: " << segments.size() << std::endl;
   for (const auto & segment : segments)
   {
     os << *segment;
