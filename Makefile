@@ -17,7 +17,7 @@ EXTERNAL_LIBS_DIR = $(EXTERNAL_DIR)/libs
 VCFLIB_STATIC_LIB = $(EXTERNAL_LIBS_DIR)/lib/libvcflib.a
 VCFLIB_DIR = external/vcflib
 VCFLIB_BUILD_LIB = libvcflib.a
-VCFLIB_URL = git@github.com:vcflib/vcflib.git
+VCFLIB_URL = git@github.com:vallpaper/vcflib.git
 
 cfiles = $(shell find $(SRC) -name "*.cpp")
 cfiles_dirs_tmp = $(shell find $(SRC) -name '*.cpp' -exec dirname {} \; | uniq)

@@ -5,7 +5,6 @@
 #include <iostream>
 #include <htslib/hts.h>
 
-
 std::ostream & operator << (std::ostream & os, const EDS & eds)
 {
   eds.save(os);
@@ -268,7 +267,7 @@ void EDS::load(std::istream & is)
   }
 }
 
-SegmentList EDS::get_segments() const
+const EDS::SegmentList & EDS::get_segments() const
 {
   return segments;
 }
