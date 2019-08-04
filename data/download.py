@@ -16,7 +16,7 @@ if __name__ == "__main__":
     vcf_idx_url = 'http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/'
     vcf_idx_file = 'ALL.chr{}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi'
 
-    chroms = ['1'] #, '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22']
+    chroms = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22']
 
     for chrom in chroms:
         chrom_file_name = chrom_file.format(chrom)
