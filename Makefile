@@ -31,10 +31,6 @@ all: vcf2eds
 run:
 	$(OUTPUT_DIR)/$(BIN) -r ./data/input/Homo_sapiens.GRCh37.75.dna.chromosome.Y.fa -v ./data/input/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz -o ./data/output/output.eds
 
-print:
-	echo ${cfiles_dirs_e}
-	echo "------------------"
-
 .PHONY: vcf2eds
 vcf2eds: external_libs $(BUILD_DIR) $(OUTPUT_DIR) $(OUTPUT_DIR)/$(BIN)
 
