@@ -29,7 +29,7 @@ dfiles = $(ofiles:.o=.d)
 all: vcf2eds
 
 run:
-	$(OUTPUT_DIR)/$(BIN) -r ./data/input/Homo_sapiens.GRCh37.75.dna.chromosome.Y.fa -v ./data/input/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz -o ./data/output/output.eds
+	$(OUTPUT_DIR)/$(BIN) -r ./data/input/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz -v ./data/input/ALL.chr22.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -o ./data/output/output.eds
 
 .PHONY: vcf2eds
 vcf2eds: external_libs $(BUILD_DIR) $(OUTPUT_DIR) $(OUTPUT_DIR)/$(BIN)

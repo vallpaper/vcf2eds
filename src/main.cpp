@@ -13,21 +13,102 @@
 
 KSEQ_INIT(gzFile, gzread)
 
-int main(int argc, char * argv[])
+void experiments(const cxxopts::ParseResult & result, std::vector<std::string> & vcf_files)
 {
-  cxxopts::Options options("vcf2eds", "Converts VCF files to elastic degenerate string.");
+  std::string reference_file = result["r"].as<std::string>();
+  std::string output_file = result["o"].as<std::string>();
 
-  std::vector<std::string> vcf_files;
+  std::cout << "vcf2eds - header\n";
+  std::cout << "ref: " << reference_file << " out: " << output_file << "\nvcf:\n";
+  std::copy(vcf_files.begin(), vcf_files.end(),
+            std::ostream_iterator<std::string>(std::cout, "\n"));
+  std::cout << "--------------------------" << std::endl;
 
-  options.add_options()
-          ("o,output", "File name of resulting EDS file", cxxopts::value<std::string>())
-          ("r,reference", "File name of reference", cxxopts::value<std::string>())
-          ("v,vcf", "Input VCF files", cxxopts::value<std::vector<std::string>>(vcf_files))
-          ("m,merge", "Length of gaps that will be merged", cxxopts::value<int>())
-          ;
+  std::map<size_t, std::unique_ptr<Segment>> variants_pos;
 
-  auto result = options.parse(argc, argv);
+  long int weird = 0;
+  long int skipped = 0;
+  long int same_as_ref = 0;
+  long int number_of_variants = 0;
+  long int number_of_samples = 0;
 
+  for (auto & vcf_filename : vcf_files)
+  {
+    vcflib::VariantCallFile vcf_file;
+    vcf_file.open(vcf_filename);
+    if (!vcf_file.is_open())
+    {
+      std::cout << "Could not open given VCF file: " << std::endl;
+      return;
+    }
+
+    vcflib::Variant variant(vcf_file);
+    while (vcf_file.getNextVariant(variant))
+    {
+      // TODO: check that alt does not start with '<'
+      if (variant.alt[0][0] == '<')
+      {
+        weird++;
+        continue;
+      }
+
+      number_of_variants++;
+
+      // std::cout << "--------------" << std::endl;
+      // std::cout << "num samples = " << variant.getNumSamples() << std::endl;
+      for (const auto & sample : variant.samples)
+      {
+        if (sample.second.size() > 1)
+        {
+          skipped++;
+          continue;
+        }
+
+        for (const auto & wtf : sample.second)
+        {
+          if (wtf.first != "GT" || wtf.second.size() > 1)
+          {
+            skipped++;
+            continue;
+          }
+
+          for (const auto & wwtf : wtf.second)
+          {
+            if (wwtf == "0|0" || wwtf == "0/0")
+              same_as_ref++;
+            else
+              number_of_samples++;
+          }
+        }
+      }
+
+      std::unique_ptr<Segment> segment = std::make_unique<Segment>(variant.position);
+      segment->add_reference(variant.ref);
+      segment->add_variants(begin(variant.alt), end(variant.alt));
+
+      auto segment_in_map = variants_pos.find(segment->start_position());
+      if (segment_in_map != variants_pos.end())
+      {
+        segment_in_map->second->merge(*segment);
+      }
+      else
+      {
+        variants_pos.insert(std::make_pair(segment->start_position(), std::move(segment)));
+      }
+    }
+  }
+
+  std::cout << "Stats" << std::endl;
+  std::cout << "weird = " << weird << std::endl;
+  std::cout << "skipped = " << skipped << std::endl;
+  std::cout << "same as ref = " << same_as_ref << std::endl;
+  std::cout << "number of variants = " << number_of_variants << std::endl;
+  std::cout << "number of samples = " << number_of_samples << std::endl;
+  std::cout << "avg per variant = " << static_cast<double>(number_of_samples) / number_of_variants << std::endl;
+}
+
+void vcf2eds_exec(const cxxopts::ParseResult & result, std::vector<std::string> & vcf_files)
+{
   std::string reference_file = result["r"].as<std::string>();
   std::string output_file = result["o"].as<std::string>();
 
@@ -46,7 +127,7 @@ int main(int argc, char * argv[])
     if (!vcf_file.is_open())
     {
       std::cout << "Could not open given VCF file: " << std::endl;
-      return 1;
+      return;
     }
 
     vcflib::Variant variant(vcf_file);
@@ -120,4 +201,26 @@ int main(int argc, char * argv[])
   // save to output file
   std::ofstream output(output_file);
   eds.save(output);
+}
+
+int main(int argc, char * argv[])
+{
+  cxxopts::Options options("vcf2eds", "Converts VCF files to elastic degenerate string.");
+
+  std::vector<std::string> vcf_files;
+
+  options.add_options()
+          ("o,output", "File name of resulting EDS file", cxxopts::value<std::string>())
+          ("r,reference", "File name of reference", cxxopts::value<std::string>())
+          ("v,vcf", "Input VCF files", cxxopts::value<std::vector<std::string>>(vcf_files))
+          ("m,merge", "Length of gaps that will be merged", cxxopts::value<int>())
+          ("t,test", "Test features and statistics - dev", cxxopts::value<bool>()->default_value("false"))
+          ;
+
+  auto result = options.parse(argc, argv);
+
+  if (result["t"].as<bool>())
+    experiments(result, vcf_files);
+  else
+    vcf2eds_exec(result, vcf_files);
 }
