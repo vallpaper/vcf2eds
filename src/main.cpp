@@ -133,6 +133,9 @@ void vcf2eds_exec(const cxxopts::ParseResult & result, std::vector<std::string> 
     vcflib::Variant variant(vcf_file);
     while (vcf_file.getNextVariant(variant))
     {
+      if (variant.alt[0][0] == '<')
+        continue;
+
       std::unique_ptr<Segment> segment = std::make_unique<Segment>(variant.position);
       segment->add_reference(variant.ref);
       segment->add_variants(begin(variant.alt), end(variant.alt));
