@@ -75,8 +75,17 @@ void process_variant_samples (const vcflib::Variant & variant, Segment & segment
 
 void experiments(const cxxopts::ParseResult & result, std::vector<std::string> & vcf_files)
 {
-  // std::string reference_file = result["r"].as<std::string>();
-  // std::string output_file = result["o"].as<std::string>();
+  std::string reference_file = result["r"].as<std::string>();
+  std::string output_file = result["o"].as<std::string>();
+
+  std::cout << "Testing" << std::endl;
+  EDS eds;
+  
+  std::ifstream input(reference_file);
+  eds.load(input);
+
+  std::ofstream output(output_file);
+  eds.save(output);
 
   // std::cout << "vcf2eds - header\n";
   // std::cout << "ref: " << reference_file << " out: " << output_file << "\nvcf:\n";

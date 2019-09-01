@@ -117,8 +117,10 @@ const BitVectorType & Segment::reference_samples() const
 
 void Segment::merge(const Segment & segment)
 {
-  if (start_position() != segment.start_position())
+  if (end_position() < segment.start_position() || segment.end_position() < start_position())
   {
+    std::cout << "Into: " << *this << std::endl;
+    std::cout << "Mergin: " << segment << std::endl;
     throw std::exception();
   }
 
@@ -127,19 +129,42 @@ void Segment::merge(const Segment & segment)
 
   std::string new_reference;
   std::string suffix;
+  std::string prefix;
 
-  auto extend_variants = [&](const Segment & segment, std::vector<Variant> & new_variants) {
-    new_reference = segment.reference();
-    suffix = segment.reference().substr(segment.reference().length() - (segment.end_position() - end_position()));
+  auto extend_variants_left = [&suffix](const Segment & suffix_from, const Segment & rhs, std::vector<Variant> & new_variants) {
+    suffix = suffix_from.reference().substr(suffix_from.reference().length() - (suffix_from.end_position() - rhs.end_position()));
 
     for (auto & variant : new_variants)
       variant.new_str(variant.str + suffix);
   };
 
-  if (reference() > segment.reference())
-    extend_variants(*this, copy_variants2);
-  else
-    extend_variants(segment, copy_variants1);
+  auto extend_variants_right = [&prefix](const Segment & preffix_from, const Segment & rhs, std::vector<Variant> & new_variants) {
+    prefix = preffix_from.reference().substr(0, rhs.start_position() - preffix_from.start_position());
+
+    for (auto & variant : new_variants)
+      variant.new_str(prefix + variant.str);
+  };
+
+  if (start_position() < segment.start_position())
+  {
+    new_reference = reference();
+    extend_variants_right(*this, segment, copy_variants2);
+  }
+  else if (start_position() > segment.start_position())
+  {
+    new_reference = segment.reference();
+    extend_variants_right(segment, *this, copy_variants1);
+  }
+
+  if (end_position() > segment.end_position())
+  {
+    extend_variants_left(*this, segment, copy_variants2);
+  }
+  else if (end_position() < segment.end_position())
+  {
+    extend_variants_left(segment, *this, copy_variants1);
+    new_reference += suffix;
+  }
 
   // new reference
   variants[0].new_str(new_reference);

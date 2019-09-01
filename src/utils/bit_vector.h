@@ -54,7 +54,7 @@ public:
     if (dummy != '|')
       throw std::logic_error("Expected | while loading bit vector");
 
-    std::copy(std::istream_iterator<data_type>(is), std::istream_iterator<data_type>(),
+    std::copy_n(std::istream_iterator<data_type>(is), bit_vector.bit_array_size,
               std::back_inserter(bit_vector.bit_array_storage));
     
     is >> dummy;
