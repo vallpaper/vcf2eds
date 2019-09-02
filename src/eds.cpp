@@ -25,8 +25,13 @@ std::ostream & operator << (std::ostream & os, const Segment & segment)
   if (segment.is_degenerate())
   {
     os << "{";
-    std::copy(segment.variants.begin(), segment.variants.end(),
-            std::ostream_iterator<Variant>(os, ","));
+    const auto last_element = segment.variants.end() - 1;
+    for (auto it = segment.variants.begin(); it != segment.variants.end(); ++it)
+    {
+      os << *it;
+      if (it != last_element)
+        os << ",";
+    }
     os << "}";
   }
   else
