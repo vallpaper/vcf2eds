@@ -1,7 +1,10 @@
 #include "eds.h"
 
 #include <unordered_set>
+#include <initializer_list>
+#include <stdexcept>
 #include <vector>
+#include <sstream>
 #include <iostream>
 #include <htslib/hts.h>
 
@@ -21,35 +24,64 @@ std::ostream & operator << (std::ostream & os, const Segment & segment)
 {
   if (segment.is_degenerate())
   {
-    os << "{" << segment.reference;
-    for (const auto & s : segment.variants)
-      os << "," << s;
+    os << "{";
+    const auto last_element = segment.variants.end() - 1;
+    for (auto it = segment.variants.begin(); it != segment.variants.end(); ++it)
+    {
+      os << *it;
+      if (it != last_element)
+        os << ",";
+    }
     os << "}";
   }
   else
   {
-    os << segment.reference;
+    os << segment.variants[0].str;
   }
 
   return os;
+}
+
+std::ostream & operator << (std::ostream & os, const Variant & variant)
+{
+  os << variant.samples;
+  os << variant.str;
+
+  return os;
+}
+
+std::istream & operator >> (std::istream & is, Variant & variant)
+{
+  is >> variant.samples;
+  is >> variant.str;
+
+  return is;
 }
 
 Segment::Segment(size_t position)
   : position(position)
 { }
 
-Segment::Segment(size_t position, std::string && reference)
-  : position(position), reference(std::move(reference))
+Segment::Segment(size_t position, Variant && reference)
+  : position(position), variants{reference}
 { }
 
-void Segment::add_reference(const std::string & ref)
+void Segment::add_reference(Variant && reference)
 {
-  reference = ref;
+  if (variants.empty())
+    variants.emplace_back(reference);
+  else
+    throw std::logic_error("Reference already added!");
 }
 
-void Segment::add_variant(const std::string & variant)
+void Segment::add_variant(Variant && variant)
 {
-  variants.insert(variant);
+  variants.emplace_back(variant);
+}
+
+void Segment::add_sample_to_variant(const int variant_idx, const std::size_t sample_idx)
+{
+  variants[variant_idx].samples.set(sample_idx, true);
 }
 
 size_t Segment::start_position() const
@@ -59,144 +91,93 @@ size_t Segment::start_position() const
 
 size_t Segment::end_position() const
 {
-  return position + reference.length() - 1;
+  return position + variants[0].str.length() - 1;
 }
 
 size_t Segment::length() const
 {
-  return reference.length();
+  return variants[0].str.length();
 }
 
 bool Segment::is_degenerate() const
 {
-  return !variants.empty();
+  return variants.size() > 1;
+}
+
+const std::string & Segment::reference() const
+{
+  if (variants.size() <= 0)
+    throw std::logic_error("No reference.");
+  
+  return variants[0].str;
+}
+
+const BitVectorType & Segment::reference_samples() const
+{
+  if (variants.size() <= 0)
+    throw std::logic_error("No reference.");
+  
+  return variants[0].samples;
 }
 
 void Segment::merge(const Segment & segment)
 {
   if (end_position() < segment.start_position() || segment.end_position() < start_position())
   {
+    std::cout << "Into: " << *this << std::endl;
+    std::cout << "Mergin: " << segment << std::endl;
     throw std::exception();
   }
 
-  int prefix_id = 0;
-  int suffix_id = 0;
+  std::vector<Variant> copy_variants1(variants.begin(), variants.end());
+  std::vector<Variant> copy_variants2(segment.variants.begin(), segment.variants.end());
+
+  std::string new_reference;
+  std::string suffix;
+  std::string prefix;
+
+  auto extend_variants_left = [&suffix](const Segment & suffix_from, const Segment & rhs, std::vector<Variant> & new_variants) {
+    suffix = suffix_from.reference().substr(suffix_from.reference().length() - (suffix_from.end_position() - rhs.end_position()));
+
+    for (auto & variant : new_variants)
+      variant.new_str(variant.str + suffix);
+  };
+
+  auto extend_variants_right = [&prefix](const Segment & preffix_from, const Segment & rhs, std::vector<Variant> & new_variants) {
+    prefix = preffix_from.reference().substr(0, rhs.start_position() - preffix_from.start_position());
+
+    for (auto & variant : new_variants)
+      variant.new_str(prefix + variant.str);
+  };
+
   if (start_position() < segment.start_position())
   {
-    // this has some prefix
-    prefix_id = 1;
+    new_reference = reference();
+    extend_variants_right(*this, segment, copy_variants2);
   }
   else if (start_position() > segment.start_position())
   {
-    // segment has some prefix
-    prefix_id = 2;
+    new_reference = segment.reference();
+    extend_variants_right(segment, *this, copy_variants1);
   }
 
-  if (end_position() < segment.end_position())
+  if (end_position() > segment.end_position())
   {
-    // segment has some suffix
-    suffix_id = 2;
-
+    extend_variants_left(*this, segment, copy_variants2);
   }
-  else if (end_position() > segment.end_position())
+  else if (end_position() < segment.end_position())
   {
-    // this has some suffix
-    suffix_id = 1;
-  }
-
-  std::string prefix;
-  std::string suffix;
-  std::string new_reference;
-  if (prefix_id)
-  {
-    assert(prefix_id == 1 || prefix_id == 2);
-
-    if (prefix_id == 1)
-      prefix = reference.substr(0, (segment.start_position() - start_position()));
-    else
-      prefix = segment.reference.substr(0, (start_position() - segment.start_position()));
-  }
-
-  if (suffix_id)
-  {
-    assert(suffix_id == 1 || suffix_id == 2);
-
-    if (suffix_id == 1)
-      suffix = reference.substr(reference.length() - (end_position() - segment.end_position()));
-    else
-      suffix = segment.reference.substr(segment.reference.length() - (segment.end_position() - end_position()));
+    extend_variants_left(segment, *this, copy_variants1);
+    new_reference += suffix;
   }
 
   // new reference
-  if (prefix_id || suffix_id)
-  {
-    if (prefix_id == 1)
-    {
-      if (suffix_id == 2)
-        new_reference = reference + suffix;
-      else
-        new_reference = reference;
-    }
-    else if (prefix_id == 2)
-    {
-      if (suffix_id == 1)
-        new_reference = segment.reference + suffix;
-      else
-        new_reference = segment.reference;
-    }
-    else // prefix_id == 0
-    {
-      if (suffix_id == 1)
-        new_reference = reference;
-      else
-        new_reference = segment.reference;
-    }
-  }
-  else
-  {
-    new_reference = reference;
-  }
+  variants[0].new_str(new_reference);
+  variants[0].intersect_samples(segment.reference_samples());
 
-  // generate new variants
-  std::vector<std::string> copy_variants1(variants.begin(), variants.end());
-  std::vector<std::string> copy_variants2(segment.variants.begin(), segment.variants.end());
-  if (prefix.length() > 0) // musime vsechny prvky z mnoziny rozsirit o prefix
-  {
-    if (prefix_id == 1)
-    {
-      // prefix add pro vsechny prvky z id = 2
-      std::transform(copy_variants2.begin(), copy_variants2.end(), copy_variants2.begin(),
-              [&](const auto & variant) { return prefix + variant; });
-    }
-    else // prefix_id == 2
-    {
-      std::transform(copy_variants1.begin(), copy_variants1.end(), copy_variants1.begin(),
-                     [&](const auto & variant) { return prefix + variant; });
-    }
-  }
-
-  if (suffix.length() > 0) // musime vsechny prvky z mnoziny rozsirit o suffix
-  {
-    if (suffix_id == 1)
-    {
-      // suffix add pro vsechny prvky z id = 2
-      std::transform(copy_variants2.begin(), copy_variants2.end(), copy_variants2.begin(),
-                     [&](const auto & variant) { return variant + suffix; });
-    }
-    else // prefix_id == 2
-    {
-      std::transform(copy_variants1.begin(), copy_variants1.end(), copy_variants1.begin(),
-                     [&](const auto & variant) { return variant + suffix; });
-    }
-  }
-
-  reference = new_reference;
-  std::unordered_set<std::string> new_variants;
-  std::for_each(copy_variants1.begin(), copy_variants1.end(), [&](const auto & variant){ new_variants.insert(variant); });
-  std::for_each(copy_variants2.begin(), copy_variants2.end(), [&](const auto & variant){ new_variants.insert(variant); });
-
-  if (new_variants.count(reference) > 0)
-    new_variants.erase(reference);
+  std::vector<Variant> new_variants;
+  std::for_each(copy_variants1.begin(), copy_variants1.end(), [&](const auto & variant){ new_variants.push_back(variant); });
+  std::for_each(copy_variants2.begin(), copy_variants2.end(), [&](const auto & variant){ new_variants.push_back(variant); });
 
   variants.swap(new_variants);
 }
@@ -234,7 +215,7 @@ void EDS::load(std::istream & is)
       if (pun >= closing_bracket)
         throw std::exception();
 
-      segment->add_reference(data.substr(current_pos, pun - current_pos));
+      segment->add_reference(Variant(std::istringstream(data.substr(current_pos, pun - current_pos))));
       current_pos = pun + 1;
 
       while (current_pos < closing_bracket)
@@ -242,7 +223,8 @@ void EDS::load(std::istream & is)
         pun = data.find_first_of(',', current_pos);
         pun = (pun >= closing_bracket) ? closing_bracket : pun;
 
-        segment->add_variant(data.substr(current_pos, pun - current_pos));
+        // TODO: this is broken
+        segment->add_variant(Variant(std::istringstream(data.substr(current_pos, pun - current_pos))));
 
         current_pos = pun + 1;
       }
@@ -259,7 +241,7 @@ void EDS::load(std::istream & is)
         // create simple segment
         segments.push_back(std::make_unique<Segment>(
                 current_pos + 1,
-                data.substr(current_pos, count)
+                Variant(data.substr(current_pos, count), 0)
         ));
       }
       current_pos = next_pos;
