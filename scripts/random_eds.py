@@ -7,6 +7,41 @@ PROTEIN_ALPHABET = 'ACDEFGHIKLMNPQRSTVWY'
 def get_random_string(alphabet, length):
     return ''.join([random.choice(alphabet) for _ in range(length)])
 
+def get_random_string_length(options):
+    return int(random.gauss(options.average, options.deviation))
+
+
+def get_degenerate_segment(options, alphabet, curr_depth):
+    print("depth {}".format(curr_depth))
+    if curr_depth == options.max_reds_depth:
+        return [get_random_string(alphabet, get_random_string_length(options))]
+
+    degenerate_segment = []
+
+    for _ in range(int(random.gauss(options.number, options.number_deviation))):
+        segment_length = get_random_string_length(options)
+
+        segment_str = ''
+        i = 0
+        while i < segment_length:
+            if random.random() < options.reds_prob:
+                # degenerate recursive segment
+                degenerate_segment = get_degenerate_segment(options, alphabet, curr_depth + 1)
+
+                segment_str += '{' + ','.join(degenerate_segment) + '}'
+                i += len(degenerate_segment[0])
+            else:
+                # simple segment
+                segment_str += random.choice(alphabet)
+                i += 1
+
+        degenerate_segment.append(segment_str)
+
+    if len(degenerate_segment) == 0:
+        degenerate_segment.append(get_random_string(alphabet, get_random_string_length(options)))
+    
+    return degenerate_segment
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option('-a', '--alphabet', dest='alphabet',
@@ -21,6 +56,10 @@ if __name__ == "__main__":
                     type='int', help="Gaussian distribution mean of the number of string in degenerate segment")
     parser.add_option('-m', '--ndeviation', dest="number_deviation", default=0.5, metavar='NUMBER',
                     type='float', help="Gaussian distribution standard deviation of the number of string in degenerate segment")
+    parser.add_option('-r', '--recursive', dest="reds_prob", default=0.1, metavar='NUMBER',
+                    type='float', help="Probability of starting recursive segment")
+    parser.add_option('-b', '--maxdepth', dest="max_reds_depth", default=5, metavar='NUMBER',
+                    type='int', help="Maximum depth of recursive segments")
     parser.add_option('-l', '--length', dest="length", default=1000, metavar='NUMBER',
                     type='int', help="Length of degenerate segment")
     parser.add_option('-o', '--output', dest="output", metavar='FILE', default='output.eds',
@@ -43,6 +82,8 @@ if __name__ == "__main__":
     print('  Gauss standard deviation length: {}'.format(options.deviation))
     print('  Gauss avg. number: {}'.format(options.number))
     print('  Gauss standard deviation number: {}'.format(options.number_deviation))
+    print('  REDS segment pp: {}'.format(options.reds_prob))
+    print('  Maximum REDS depth: {}'.format(options.max_reds_depth))
     print('  EDS length: {}'.format(options.length))
     print('  EDS output file: {}'.format(options.output))
 
@@ -51,13 +92,7 @@ if __name__ == "__main__":
     while i < options.length:
         if random.random() < options.probability:
             # degenerate segment
-
-            degenerate_segment = []
-            for _ in range(int(random.gauss(options.number, options.number_deviation))):
-                degenerate_segment.append(get_random_string(alphabet, int(random.gauss(options.average, options.deviation))))
-
-            if len(degenerate_segment) == 0:
-                degenerate_segment = get_random_string(alphabet, int(random.gauss(options.average, options.deviation)))
+            degenerate_segment = get_degenerate_segment(options, alphabet, 0)
 
             eds_str += '{' + ','.join(degenerate_segment) + '}'
             i += len(degenerate_segment[0])
