@@ -33,8 +33,7 @@ public:
   friend std::ostream & operator << (std::ostream & os, const BitVector<data_type> & bit_vector)
   {
     os << "[" << bit_vector.bit_array_size << "|";
-    std::copy(bit_vector.bit_array_storage.begin(), bit_vector.bit_array_storage.end(),
-              std::ostream_iterator<data_type>(os));
+    os.write(&(bit_vector.bit_array_storage[0]), bit_vector.bit_array_storage.size());
     os << "]";
 
     return os;
@@ -54,8 +53,7 @@ public:
     if (dummy != '|')
       throw std::logic_error("Expected | while loading bit vector");
 
-    std::copy_n(std::istream_iterator<data_type>(is), bit_vector.bit_array_size,
-              std::back_inserter(bit_vector.bit_array_storage));
+    is.read(&(bit_vector.bit_array_storage[0]), bit_vector.bit_array_size);
 
     is >> dummy;
     if (dummy != ']')
@@ -160,10 +158,10 @@ void BitVector<data_type>::print_read(std::ostream & os) const
   {
     for (std::size_t i = 0; i < BITS_PER_DATA_TYPE; i++)
     {
-      std::cout << static_cast<int>((data_byte >> (BITS_PER_DATA_TYPE - i - 1)) & 1);
+      os << static_cast<int>((data_byte >> (BITS_PER_DATA_TYPE - i - 1)) & 1);
     }
   }
-  std::cout << std::endl;
+  os << std::endl;
 }
 
 template <class data_type>
