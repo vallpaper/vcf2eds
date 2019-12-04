@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <vector>
 #include <ostream>
+#include <memory>
 
 class Segment
 {

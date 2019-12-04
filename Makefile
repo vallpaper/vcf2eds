@@ -3,7 +3,7 @@ CXXFLAGS = -Wall -pedantic -Wextra -std=c++14 -I$(EXTERNAL_LIBS_DIR)/include -MM
 CXXFLAGS_DEBUG = -g -O0
 CXXFLAGS_RELEASE = -O3
 LIBS_INCLUDE = -L$(EXTERNAL_LIBS_DIR)/lib
-LIBS = -lvcflib -lhts -lz -lm -llzma -lbz2
+LIBS = -lvcflib -lhts -lz -lm -llzma -lbz2 -lpthread
 
 BUILD_DIR = build
 
@@ -47,7 +47,7 @@ $(OUTPUT_DIR):
 	mkdir -p $(OUTPUT_DIR)
 
 $(BUILD_DIR)/%.o: $(SRC)/%.cpp
-	$(CXX) $(CXXFLAGS) $(CXXFLAGS_DEBUG) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_RELEASE) -c $< -o $@
 
 $(EXTERNAL_DIR):
 	mkdir -p $(EXTERNAL_DIR)

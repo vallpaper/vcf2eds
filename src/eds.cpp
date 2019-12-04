@@ -2,6 +2,8 @@
 
 #include <unordered_set>
 #include <vector>
+#include <cassert>
+#include <algorithm>
 #include <iostream>
 #include <htslib/hts.h>
 
