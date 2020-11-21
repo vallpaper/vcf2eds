@@ -3,7 +3,7 @@ CXXFLAGS = -Wall -pedantic -Wextra -std=c++14 -I$(EXTERNAL_LIBS_DIR)/include -MM
 CXXFLAGS_DEBUG = -g -O0
 CXXFLAGS_RELEASE = -O3
 LIBS_INCLUDE = -L$(EXTERNAL_LIBS_DIR)/lib
-LIBS = -lvcflib -lhts -lz -lm -llzma -lbz2
+LIBS = -lvcflib -lhts -lz -lm -llzma -lbz2 -lcurl
 
 BUILD_DIR = build
 
@@ -17,7 +17,7 @@ EXTERNAL_LIBS_DIR = $(EXTERNAL_DIR)/libs
 VCFLIB_STATIC_LIB = $(EXTERNAL_LIBS_DIR)/lib/libvcflib.a
 VCFLIB_DIR = external/vcflib
 VCFLIB_BUILD_LIB = libvcflib.a
-VCFLIB_URL = git@github.com:vallpaper/vcflib.git
+VCFLIB_URL = git@github.com:vcflib/vcflib.git
 
 cfiles = $(shell find $(SRC) -name "*.cpp")
 cfiles_dirs_tmp = $(shell find $(SRC) -name '*.cpp' -exec dirname {} \; | uniq)
@@ -63,13 +63,15 @@ $(VCFLIB_STATIC_LIB): $(VCFLIB_DIR)/lib/$(VCFLIB_BUILD_LIB) $(VCFLIB_DIR)/tabixp
 	cp $(VCFLIB_DIR)/lib/$(VCFLIB_BUILD_LIB) $(EXTERNAL_LIBS_DIR)/lib
 	cp $(VCFLIB_DIR)/tabixpp/htslib/libhts.a $(EXTERNAL_LIBS_DIR)/lib
 	mkdir -p $(EXTERNAL_LIBS_DIR)/include/vcflib
+	mkdir -p $(EXTERNAL_LIBS_DIR)/include/htslib
 	cp $(VCFLIB_DIR)/include/*.h $(VCFLIB_DIR)/include/*.hpp $(EXTERNAL_LIBS_DIR)/include/vcflib
+	cp $(VCFLIB_DIR)/tabixpp/htslib/htslib/*.h $(EXTERNAL_LIBS_DIR)/include/htslib
 
 $(VCFLIB_DIR)/Makefile:
 	git clone --recursive $(VCFLIB_URL) $(VCFLIB_DIR)
 
 $(VCFLIB_DIR)/lib/$(VCFLIB_BUILD_LIB): $(VCFLIB_DIR)/Makefile
-	$(MAKE) -C $(VCFLIB_DIR) $(VCFLIB_BUILD_LIB)
+	$(MAKE) -C $(VCFLIB_DIR) all
 
 $(BUILD_DIR): $(ofiles_dirs)
 	mkdir -p $(BUILD_DIR)

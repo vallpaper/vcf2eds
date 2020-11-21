@@ -1,4 +1,5 @@
 #include "eds.h"
+#include "htslib/hts.h"
 
 #include <unordered_set>
 #include <initializer_list>
@@ -6,7 +7,6 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include <htslib/hts.h>
 
 std::ostream & operator << (std::ostream & os, const EDS & eds)
 {

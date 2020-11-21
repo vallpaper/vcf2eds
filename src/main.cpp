@@ -1,7 +1,7 @@
 #include "eds.h"
 #include "utils/cxxopts.h"
-#include "utils/kseq.h"
 #include "utils/bit_vector.h"
+#include "htslib/kseq.h"
 
 #include <zlib.h>
 //#include <stdio.h>
